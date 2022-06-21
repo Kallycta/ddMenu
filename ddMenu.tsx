@@ -1,99 +1,106 @@
-import React, {useState, useRef, useEffect} from "react";
-import './infoWindowSelectDropDown.scss'
+import React, { useState } from "react";
+import { useTypedSelector } from "../../../hooks/useTypedSelector";
+import { getDataSource } from "../../../redux/ds/ds.selector";
+import { RootState } from "../../../redux/redux.store";
+import "./select.scss";
+import useAction from "../../../hooks/useAction";
+import useClosableRef from "../../../hooks/useCloseRef";
+import { ISelect } from "../../templates";
 
+type ISelectType = {
+    props?: any;
+    cmp: ISelect;
+};
 
+const SelectMenu: React.FC<ISelectType> = ({ cmp }) => {
+    const dataSource = useTypedSelector((state: RootState) =>
+        getDataSource(state, cmp.ds.key)
+    );
+    const action = useAction(cmp.actions);
 
-type InfoWindowSelectDropDownType = {
-    props?: any
-    title?: any
-    items?: any
-    multiSelect?: any
-    
-  }
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectItem, setSelectItem] = useState("Выберите источник данных");
+    // const [selection, setSelection] = useState<any>([]);
 
-const InfoWindowSelectDropDown: React.FC<InfoWindowSelectDropDownType> = ({title, items, multiSelect}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selection, setSelection] = useState<any>([]);
-  const ref = useRef<any>(null);
+    const { ref } = useClosableRef<HTMLDivElement>(isOpen, setIsOpen);
 
-  useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (ref.current && !ref.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClickOutside, true);
-    return () => {
-      document.removeEventListener('click', handleClickOutside, true);
-    };
-  }, [ isOpen ]);
+    const classShow =
+        "constructor-select__header-menu constructor-select__header-menu--show";
+    const classHide =
+        "constructor-select__header-menu constructor-select__header-menu--hide";
 
+    return (
+        <>
+            <div className="constructor-select">
+                <div
+                    tabIndex={0}
+                    ref={ref}
+                    className="constructor-select__header"
+                    role="button"
+                    onKeyDown={() => setIsOpen(!isOpen)}
+                    onClick={() => setIsOpen(!isOpen)}
+                >
+                    <div className="constructor-select__header-title">
+                        <span>{selectItem}</span>
+                    </div>
+                    <div className={isOpen ? classShow : classHide}>
+                        <ul className="constructor-select__list ">
+                            {cmp.isClear && (
+                                <li
+                                    className="constructor-select__list-item"
+                                    key="010101"
+                                    data-id="clear"
+                                    onClick={(e) => {
+                                        action.onClick(
+                                            e.currentTarget.dataset.id
+                                        );
 
+                                        setSelectItem(cmp?.textClear?.key);
+                                    }}
+                                >
+                                    <button type="button">
+                                        <span>{cmp?.textClear?.key}</span>
+                                    </button>
+                                </li>
+                            )}
 
-  function hundleOnClick(item?: any) {
-    if(!selection.some((current?: any) => current.id === item.id )) {
-      if(!multiSelect) {
-        setSelection([item])
-      }
-      else if (multiSelect) {
-        setSelection([...selection, item])
-      }
-    } else {
-      let selectionAfterRemoval = selection;
-      selectionAfterRemoval = selectionAfterRemoval.filter(
-        (current: any) => current.id !== item.id
-      );
-      setSelection([...selectionAfterRemoval]);
-    
-    }
-
-  }
-  function isItemInSelection(item: any) {
-      if(selection.find((current: any) => current.id === item.id)) {
-        return true;
-      }
-      return false;
-  }
-    
-    return <>
-      <div className="dropdown-wrapper">
-        <div tabIndex={0}
-              ref={ref}
-              className="dropdown-header"
-              role="button"
-              onKeyDown={() => setIsOpen(!isOpen)}
-              onClick={() => setIsOpen(!isOpen) }>
-                <div className="dropdown-header__title"> 
-                  <p style={isOpen ? {'color': '#bfbfb' }: {'color': '262626'}} className="dropdown-header__title_bold">Выберите источник данных</p>
+                            {dataSource ? (
+                                dataSource?.items.map((item: any) => (
+                                    <li
+                                        className="constructor-select__list-item"
+                                        key={item.id}
+                                        data-id={item.id}
+                                        onClick={(e) => {
+                                            action.onClick(
+                                                e.currentTarget.dataset.id
+                                            );
+                                            setSelectItem(item[cmp.item.val]);
+                                        }}
+                                    >
+                                        <button type="button">
+                                            <span>{item[cmp.item.val]}</span>
+                                        </button>
+                                    </li>
+                                ))
+                            ) : (
+                                <li className="constructor-select__list-item not_data">
+                                    <div
+                                        onClick={() =>
+                                            setSelectItem("Нет данных")
+                                        }
+                                        className="constructor-select__list-item-btn"
+                                    >
+                                        <span>Нет данных</span>
+                                        {/* <img src="./data-error.png" alt="data-error" /> */}
+                                    </div>
+                                </li>
+                            )}
+                        </ul>
+                    </div>
                 </div>
-              {/* <div className="dd-header__action">
-                  <p>{isOpen ? 'Close' : 'Open'}</p>
-              </div> */}
-              <div className="dropdown-header__menu">
-              {isOpen && (
-              <ul className="dd-list">
-                {items.map((item: any) =>  (
-                <li className="dd-list-item"
-                    key={item.id}>
-                      <button 
-                        type="button"
-                        onClick={() => hundleOnClick(item)}
-                        >
-                          <span>{item.value}</span>
-                          <span>{isItemInSelection(item) && 'Selected'}</span>
-                          
-                        </button>
-                </li>
-                ))}
-              </ul>
-            )}
-              </div>
             </div>
-            
-      </div>
-    </>
-  }
+        </>
+    );
+};
 
-  export default InfoWindowSelectDropDown;
-
-
+export default SelectMenu;
